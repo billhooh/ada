@@ -1,0 +1,83 @@
+-- Định nghĩa dịch vụ cần thiết
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+
+-- Biến để theo dõi trạng thái của Mirage Island
+local mirageIslandDetected = false
+
+-- Đường dẫn webhook Discord
+local webhookURL = "https://discord.com/api/webhooks/1289903875867938816/p8hvih_mCm8F1yqcF4Y9A-KQl4gAudTQc8O4uqONnRBbY4VeQi6cw3XFgO8uAJ6eL_AK"
+
+-- Hàm gửi thông báo đến Discord
+local function sendToDiscord(message, embed)
+    local data = {
+        ["content"] = message,
+        ["embeds"] = {embed}
+    }
+    
+    local jsonData = HttpService:JSONEncode(data)
+    HttpService:PostAsync(webhookURL, jsonData, Enum.HttpContentType.ApplicationJson)
+end
+
+-- Hàm phát hiện Mirage Island
+local function detectMirageIsland()
+    -- Kiểm tra sự tồn tại của Mirage Island
+    local mirageIsland = Workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island")
+    
+    if mirageIsland and not mirageIslandDetected then
+        mirageIslandDetected = true
+        print("Mirage Island đã xuất hiện!")
+
+        -- Gửi thông báo cho người chơi qua chat
+        game.StarterGui:SetCore("ChatMakeSystemMessage", {
+            Text = "Mirage Island đã xuất hiện trên server này!",
+            Color = Color3.new(0, 1, 0)  -- Màu xanh lá cây
+        })
+
+        -- Tạo embed cho thông báo
+        local embed = {
+            ["title"] = "Thông báo",
+            ["description"] = "Có Mirage nè! ✅",
+            ["color"] = 3066993,  -- Màu xanh lá cây
+            ["thumbnail"] = {
+                ["url"] = "https://thatnhucuocsong.com.vn/wp-content/uploads/2022/03/Hinh-anh-anime-ngau-nam-1.jpg"  -- URL icon verify của bạn
+            }
+        }
+        
+        -- Gửi thông báo đến Discord
+        sendToDiscord("Có Mirage nè! ✅", embed)
+
+        -- Lấy danh sách server có Mirage Island
+        local places = TeleportService:GetPlayerPlaceInstanceAsync(Players.LocalPlayer)
+        for _, place in pairs(places) do
+            if place:IsA("Instance") and place.Name == "Mirage Island" then
+                TeleportService:TeleportToPlaceInstance(place.PlaceId, place.InstanceId, Players.LocalPlayer)
+                break
+            end
+        end
+
+    elseif not mirageIsland then
+        mirageIslandDetected = false  -- Reset trạng thái nếu không tìm thấy
+    end
+end
+
+-- Kiểm tra liên tục nếu Mirage Island xuất hiện
+spawn(function()
+    while wait(5) do  -- Kiểm tra mỗi 5 giây
+        detectMirageIsland()
+    end
+end)
+
+-- Hàm thông báo khi người chơi tham gia
+local function onPlayerAdded(player)
+    sendToDiscord(player.Name .. " đã tham gia server!", {
+        ["title"] = "Thông báo người chơi mới",
+        ["description"] = player.Name .. " vừa mới tham gia!",
+        ["color"] = 3447003  -- Màu xám
+    })
+end
+
+-- Kết nối sự kiện người chơi tham gia
+Players.PlayerAdded:Connect(onPlayerAdded)
